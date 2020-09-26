@@ -3,7 +3,6 @@ package e.lmandrew.victorbaptistchurch;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -13,15 +12,16 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertController;
+//import androidx.appcompat.app.AlertController;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.firebase.ui.database.FirebaseRecyclerAdapter;
+import com.firebase.ui.database.FirebaseRecyclerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -30,6 +30,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -60,6 +61,10 @@ public class AwanaFragment extends Fragment {
 
     private FirebaseAuth.AuthStateListener mAuthListener;
 
+    private final String posts_name = "Awana_posts";
+
+    private FirebaseRecyclerAdapter adapter;
+
 
 
     public AwanaFragment(){
@@ -81,7 +86,7 @@ public class AwanaFragment extends Fragment {
 
         storage = FirebaseStorage.getInstance().getReference();
 
-        databaseReference = database.getInstance().getReference().child("Awana_posts");
+        databaseReference = database.getInstance().getReference().child(posts_name);
 
         firebaseAuth = FirebaseAuth.getInstance();
 
@@ -97,6 +102,42 @@ public class AwanaFragment extends Fragment {
                     //loginIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     //startActivity(loginIntent);
                 }
+            }
+        };
+
+        Query query = FirebaseDatabase.getInstance()
+                .getReference()
+                .child(posts_name)
+                .limitToLast(50);
+
+        FirebaseRecyclerOptions<Post_Item> options =
+                new FirebaseRecyclerOptions.Builder<Post_Item>()
+                .setQuery(query, Post_Item.class)
+                .build();
+        adapter = new FirebaseRecyclerAdapter<Post_Item, PostViewHolder>(options) {
+            @Override
+            protected void onBindViewHolder(@NonNull PostViewHolder holder, int position, @NonNull Post_Item model) {
+                final String post_id = "PostID";
+                final String post_key = getRef(position).getKey();
+                holder.setTitle(model.getTitle());
+                holder.setDesc(model.getSummary());
+                //holder.setImageUrl(context.getApplicationContext(), model.getImageUrl());
+                holder.setUserName(model.getUsername());
+                /*holder.mView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        Intent singleActivity = new Intent(MainActivity.this, SinglePostActivity.class);
+                        singleActivity.putExtra(post_id, post_key);
+                        startActivity(singleActivity);
+                    } });*/
+            }
+
+            @NonNull
+            @Override
+            public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.post_item, parent, false);
+                return new PostViewHolder(view);
             }
         };
         // posting to Firebase
@@ -178,28 +219,12 @@ public class AwanaFragment extends Fragment {
     public void onStart() {
         super.onStart();
         firebaseAuth.addAuthStateListener(mAuthListener);
-        FirebaseRecyclerAdapter<Post_Item, PostViewHolder> FBRA = new FirebaseRecyclerAdapter<Post_Item, PostViewHolder>(
-                Post_Item.class,
-                R.layout.post_item,
-                PostViewHolder.class,
-                databaseReference
-        )
-        {
-            @Override
-            protected void populateViewHolder(PostViewHolder viewHolder, Post_Item model, int position) {
-                final String post_key = getRef(position).getKey().toString();
-                viewHolder.setTitle(model.getTitle());
-                viewHolder.setDesc(model.getDesc());
-                viewHolder.setImageUrl(getApplicationContext(), model.getImageUrl());
-                viewHolder.setUserName(model.getUsername());
-                viewHolder.mView.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        Intent singleActivity = new Intent(MainActivity.this, SinglePostActivity.class);
-                        singleActivity.putExtra(“PostID”, post_key);
-                        startActivity(singleActivity);
-                    } });}};
-        recyclerView.setAdapter(FBRA);
+        adapter.startListening();
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        adapter.stopListening();
+    }
 }
