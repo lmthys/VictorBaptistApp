@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "572849101303",
+    "firebase_url": "https://victor-baptist-c-1566854304335.firebaseio.com",
+    "project_id": "victor-baptist-c-1566854304335",
+    "storage_bucket": "victor-baptist-c-1566854304335.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572849101303:android:caceabc2a05d162574b6f2",
+        "android_client_info": {
+          "package_name": "e.lmandrew.victorbaptistchurch"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "572849101303-9j4d11q36ack85krsb1tis1eeslfprn0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "e.lmandrew.victorbaptistchurch",
+            "certificate_hash": "4a84cbaaad940ee90f97c10f6ef2558f79bea908"
+          }
+        },
+        {
+          "client_id": "572849101303-k2rqjh6ufpb1ho3asipfn52fcbqp9n9i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCngmSg7Ihg6p4HcIScfz4salLRTH0Vrmw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "572849101303-k2rqjh6ufpb1ho3asipfn52fcbqp9n9i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Victor Baptist Church</string>
+    <string name="logout">logout</string>
+
+    <string-array name="navigation_drawer_items_array">
+        <item>Account</item>
+        <item>Awana</item>
+        <item>Directory</item>
+        <item>Youth</item>
+    </string-array>
+
+</resources>
