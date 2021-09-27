@@ -86,7 +86,7 @@ public class AwanaFragment extends Fragment {
 
         storage = FirebaseStorage.getInstance().getReference();
 
-        databaseReference = database.getInstance().getReference().child(posts_name);
+        databaseReference = FirebaseDatabase.getInstance().getReference().child(posts_name);
 
         firebaseAuth = FirebaseAuth.getInstance();
 

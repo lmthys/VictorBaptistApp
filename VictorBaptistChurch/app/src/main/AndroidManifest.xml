@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="e.lmandrew.victorbaptistchurch">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -19,6 +20,8 @@
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity"/>
+        <activity android:name=".NewAccountActivity"/>
+
     </application>
 
 </manifest>

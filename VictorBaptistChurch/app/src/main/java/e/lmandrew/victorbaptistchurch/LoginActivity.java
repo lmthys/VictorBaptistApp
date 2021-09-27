@@ -8,14 +8,19 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -28,12 +33,15 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
+
+import java.net.ConnectException;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -42,6 +50,33 @@ public class LoginActivity extends AppCompatActivity {
     private GoogleSignInClient googleSignInClient;
     private FirebaseAuth mAuth;
     private boolean isGranted = false;
+    private final int REQUEST_INTERNET = 1;
+    private Button signIn = null;
+    private TextView email = null;
+    private TextView pass = null;
+
+    ActivityResultLauncher<Intent> gSA = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if(result.getResultCode() == Activity.RESULT_OK)
+                    {
+                        Intent data = result.getData();
+                        try {
+                            // The Task returned from this call is always completed, no need to attach
+                            // a listener.
+                            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                            GoogleSignInAccount account = task.getResult(ApiException.class);
+                            onLoggedIn(account);
+                        } catch (ApiException e) {
+                            // The ApiException status code indicates the detailed failure reason.
+                            Log.w(TAG, "signInResult:failed code=" + e.getStatusCode());
+                        }
+
+                    }
+                }
+            });
 
     @Override
     public void onStart() {
@@ -70,9 +105,12 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        mAuth = FirebaseAuth.getInstance();
+        FirebaseApp.initializeApp(this);
 
-        checkPermissions();
+        if(!(ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED)) {
+            requestPermissions(new String[]{Manifest.permission.INTERNET}, REQUEST_INTERNET);
+        }
+        mAuth = FirebaseAuth.getInstance();
 
         googleSignInButton = findViewById(R.id.sign_in_button);
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -85,36 +123,38 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent signInIntent = googleSignInClient.getSignInIntent();
-                startActivityForResult(signInIntent, 101);
+                gSA.launch(signInIntent);
+            }
+        });
+        signIn = findViewById(R.id.signInButton);
+        email = findViewById(R.id.signInEmail);
+        pass = findViewById(R.id.signInPass);
+        signIn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mAuth.signInWithEmailAndPassword(email.getText().toString(), pass.getText().toString())
+                        .addOnCompleteListener(LoginActivity.this, new OnCompleteListener<AuthResult>() {
+                            @Override
+                            public void onComplete(@NonNull Task<AuthResult> task) {
+                                if (task.isSuccessful()) {
+                                    Log.w("UPDATED", "logged in successfully");
+                                    mAuth = FirebaseAuth.getInstance();
+                                    updateMain(mAuth.getCurrentUser());
+                                } else {
+                                    Log.w((String) TAG, "createUserWithEmail:failure", task.getException());
+                                }
+                            }
+                        });
+
             }
         });
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        //if (resultCode == Activity.RESULT_OK) {
-            switch (requestCode) {
-                case 101:
-                    try {
-                        // The Task returned from this call is always completed, no need to attach
-                        // a listener.
-                        Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-                        GoogleSignInAccount account = task.getResult(ApiException.class);
-                        onLoggedIn(account);
-                    } catch (ApiException e) {
-                        // The ApiException status code indicates the detailed failure reason.
-                        Log.w(TAG, "signInResult:failed code=" + e.getStatusCode());
-                    }
-                    break;
-            }
-        //}
-        //else
-        //{
-            //Log.w(TAG, "signInWithCredential:failure");
-        //}
+    public void createUserClicked(View v)
+    {
+        Intent i = new Intent(this, NewAccountActivity.class);
+        startActivity(i);
     }
-
     private void onLoggedIn(final GoogleSignInAccount googleSignInAccount) {
         // add to firebase
         AuthCredential credential = GoogleAuthProvider.getCredential(googleSignInAccount.getIdToken(), null);
@@ -158,48 +198,31 @@ public class LoginActivity extends AppCompatActivity {
 
     }
 
-    private void updateMain(FirebaseUser user){
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode)
+        {
+            case REQUEST_INTERNET:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                {
+                    Toast.makeText(LoginActivity.this, "Permission Granted!", Toast.LENGTH_SHORT).show();
+                }
+                else
+                {
+                    Toast.makeText(LoginActivity.this, "Permission Denied!", Toast.LENGTH_SHORT).show();
+                }
+                break;
+        }
+    }
+
+
+    public void updateMain(FirebaseUser user){
         Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra(MainActivity.GOOGLE_ACCOUNT, user);
 
 
         startActivity(intent);
         finish();
-    }
-
-    private void checkPermissions()
-    {
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED)
-        {
-            // All good nothing to do
-            Log.w(TAG, "permissions:Success");
-
-        }
-        else
-        {
-            // Request Permission
-            //TODO make 102 a static value
-            requestPermissions(new String[] {Manifest.permission.INTERNET}, 102);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode)
-        {
-            case 102:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                {
-                    // all good
-                    Log.w(TAG, "permissions:Success");
-                }
-                else
-                {
-                    //TODO
-                    //Snackbar mySnackbar = Snackbar.make(findViewById(R.id.), "Without this permission you will not be able to sign in via Google", BaseTransientBottomBar.LENGTH_SHORT);
-                }
-                return;
-        }
     }
 }
